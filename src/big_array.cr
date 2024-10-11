@@ -25,9 +25,10 @@ class BigArray(T)
     when .negative?
       raise ArgumentError.new("Array sizes must not be negative")
     when 0
+      # Don't allocate unless we need to hold actual data.
       @buffer = Pointer(T).null
     else
-      @buffer = Pointer(T).malloc(capacity)
+      @buffer = Pointer(T).malloc({capacity, MIN_CAPACITY}.max)
     end
   end
 
@@ -62,9 +63,22 @@ class BigArray(T)
   private def ensure_capacity(size : Int64)
     if @capacity < size
       old_capacity = @capacity
-      resize_candidates = {(@capacity * RESIZE_COEFFICIENT).to_i64, size, MIN_CAPACITY}
-      @capacity = resize_candidates.max
-      @buffer = @buffer.realloc(@capacity)
+      capacity = {
+        # We need to be able to accommocate at least the size we're given
+        size,
+        # If we're only increasing the size by 1 a bunch of times, we don't want
+        # to reallocate each time. Multiplying capacity by a resize coefficient
+        # each time results in fewer reallocations.
+        (@capacity * RESIZE_COEFFICIENT).to_i64,
+
+        # If we're allocating at all, make sure we're allocating at least the
+        # minimum capacity so that building the array up from nothing doesn't
+        # result in rapid-fire allocations up front.
+        MIN_CAPACITY,
+      }.max
+      @buffer = @buffer.realloc(capacity)
+      # Only set the new capacity if the buffer realloc succeeds
+      @capacity = capacity
     end
   end
 end
