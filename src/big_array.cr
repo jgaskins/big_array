@@ -32,18 +32,20 @@ class BigArray(T)
     end
   end
 
+  @[AlwaysInline]
   def unsafe_fetch(index : Int)
     @buffer[index]
   end
 
+  @[AlwaysInline]
   def unsafe_put(index : Int, value : T)
     @buffer[index] = value
   end
 
   def <<(value : T) : self
-    ensure_capacity size + 1
+    ensure_capacity size + 1i64
     @buffer[size] = value
-    @size += 1
+    @size += 1i64
     self
   end
 
@@ -56,29 +58,37 @@ class BigArray(T)
     end
   end
 
+  def each_index : Nil
+    index = 0i64
+    while index < size
+      yield index
+      index += 1i64
+    end
+  end
+
   def to_unsafe
     @buffer
   end
 
-  private def ensure_capacity(size : Int64)
-    if @capacity < size
-      old_capacity = @capacity
-      capacity = {
-        # We need to be able to accommocate at least the size we're given
-        size,
-        # If we're only increasing the size by 1 a bunch of times, we don't want
-        # to reallocate each time. Multiplying capacity by a resize coefficient
-        # each time results in fewer reallocations.
-        (@capacity * RESIZE_COEFFICIENT).to_i64,
+  private def ensure_capacity(size : Int64) : Nil
+    return if @capacity >= size
 
-        # If we're allocating at all, make sure we're allocating at least the
-        # minimum capacity so that building the array up from nothing doesn't
-        # result in rapid-fire allocations up front.
-        MIN_CAPACITY,
-      }.max
-      @buffer = @buffer.realloc(capacity)
-      # Only set the new capacity if the buffer realloc succeeds
-      @capacity = capacity
-    end
+    old_capacity = @capacity
+    capacity = {
+      # We need to be able to accommocate at least the size we're given
+      size,
+      # If we're only increasing the size by 1 a bunch of times, we don't want
+      # to reallocate each time. Multiplying capacity by a resize coefficient
+      # each time results in fewer reallocations.
+      (@capacity * RESIZE_COEFFICIENT).to_i64,
+
+      # If we're allocating at all, make sure we're allocating at least the
+      # minimum capacity so that building the array up from nothing doesn't
+      # result in rapid-fire allocations up front.
+      MIN_CAPACITY,
+    }.max
+    @buffer = @buffer.realloc(capacity)
+    # Only set the new capacity if the buffer realloc succeeds
+    @capacity = capacity
   end
 end
