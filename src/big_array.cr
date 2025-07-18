@@ -13,7 +13,7 @@ class BigArray(T)
   getter size : Int64
   protected setter size
 
-  def self.build(capacity : Int64)
+  def self.build(capacity : Int64, &)
     array = new(initial_capacity: capacity)
     array.size = yield(array.to_unsafe).to_i64
     array
@@ -58,7 +58,7 @@ class BigArray(T)
     end
   end
 
-  def each_index : Nil
+  def each_index(&) : Nil
     index = 0i64
     while index < size
       yield index
@@ -73,7 +73,6 @@ class BigArray(T)
   private def ensure_capacity(size : Int64) : Nil
     return if @capacity >= size
 
-    old_capacity = @capacity
     capacity = {
       # We need to be able to accommocate at least the size we're given
       size,
